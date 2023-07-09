@@ -1,6 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 # Create your models here.
@@ -26,6 +27,108 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email, name, last_name, password=None, **extra_fields):
         return self._create_user(email, name, last_name, password, True, True, **extra_fields)
+
+    def update(self, account=None, **extra_fields):
+        """
+        En este tipo de actualización no se permite convertir al usuario en Staff o Superuser.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+        
+        if 'is_staff' in extra_fields.keys():
+            extra_fields.pop('is_staff')
+        
+        if 'is_superuser' in extra_fields.keys():
+            extra_fields.pop('is_superuser')
+        
+        for field, value in extra_fields.items():
+            setattr(account, field, value)
+
+        if 'password' in extra_fields.keys():
+            account.set_password(extra_fields['password'])
+
+        account.save()
+        return account
+    
+    def activate_user(self, account=None):
+        """
+        Se vuelve a conceder al usuario el acceso a los servicios.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+    
+        account.is_active = True
+        account.save()
+        return account
+    
+    def delete_logical(self, account=None):
+        """
+        Borrado lógico de un usuario, se marca con is_active = False para revocar su acceso.
+        El usuario se puede volver a reactivar.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+        
+        account.is_active = False
+        account.save()
+        return account
+    
+    def delete_physical(self, account=None):
+        """
+        Borrado físico de un usuario, con este borrado no se puede recuperar al usuario.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+        try:
+            account.delete()
+            return True
+        except:
+            return False
+    
+    def revoke_is_staff(self, account):
+        """
+        Revoca el privilegio de is_staff al usuario.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+    
+        account.is_staff = False
+        account.save()
+        return account
+    
+    def revoke_is_superuser(self, account):
+        """
+        Revoca el privilegio de is_superuser al usuario.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+    
+        account.is_superuser = False
+        account.save()
+        return account
+    
+    def add_is_staff(self, account):
+        """
+        Añade el privilegio de is_staff al usuario.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+    
+        account.is_staff = True
+        account.save()
+        return account
+    
+    def add_is_superuser(self, account):
+        """
+        Añade el privilegio de is_superuser al usuario.
+        """
+        if account is None:
+            raise ValidationError(message=_('No se puede realizar ninguna actualización si no se recibe el usuario a actualizar.'))
+    
+        account.is_superuser = True
+        account.save()
+        return account
+
 
 class Account(AbstractBaseUser,PermissionsMixin):
     email = models.EmailField(verbose_name=_('Email'),max_length=250, unique=True)
