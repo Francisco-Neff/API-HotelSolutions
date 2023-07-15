@@ -5,6 +5,29 @@ from rest_framework import serializers
 
 from apps.account.models import Account
 
+class AccountUserRegisterSerializer(serializers.ModelSerializer):
+    """
+    Serializer para registrar nuevas cuentas de tipo base en el modelo Account.
+    """
+    id = serializers.CharField(
+        label=_("id"),
+        read_only=True
+    )
+    password = serializers.CharField(
+        label=_("Password"),
+        style={'input_type': 'password'},
+        trim_whitespace=False,
+        write_only=True,
+        required=False
+    )
+    class Meta:
+        model = Account
+        exclude = ['is_staff','is_superuser','groups','user_permissions']
+    
+    def create(self,validated_data):
+        account = Account.objects.create_user(**validated_data)
+        return account
+
 class AccountRetrieveSerializer(serializers.ModelSerializer):
     """
     Serializer para el visualizado de usuarios.

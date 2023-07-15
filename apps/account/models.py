@@ -1,13 +1,19 @@
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.core.exceptions import ValidationError
 
 
 # Create your models here.
-class UserManager(BaseUserManager):
+class AccountManager(BaseUserManager):
     def _create_user(self, email, name, last_name, password, is_staff, is_superuser, **extra_fields):
-        user = self.model(
+        try:
+            validate_password(password=password)
+        except:
+            raise ValidationError(message=_('La contraseña no ha podio ser validada'))
+        
+        account = self.model(
             email = email,
             name = name,
             last_name = last_name,
@@ -15,9 +21,9 @@ class UserManager(BaseUserManager):
             is_superuser = is_superuser,
             **extra_fields
         )
-        user.set_password(password)
-        user.save(using=self.db)
-        return user
+        account.set_password(password)
+        account.save(using=self.db)
+        return account
 
     def create_user(self, email, name, last_name, password=None, **extra_fields):
         return self._create_user(email, name, last_name, password, False, False, **extra_fields)
@@ -137,7 +143,7 @@ class Account(AbstractBaseUser,PermissionsMixin):
     is_staff = models.BooleanField(default = False)
     is_active = models.BooleanField(blank=True, default = False)
 
-    objects = UserManager()
+    objects = AccountManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name','last_name']

@@ -1,10 +1,10 @@
 import time
 from faker import Faker
-from urllib.parse import urlencode
 
 from django.test import TestCase
 from django.db.utils import IntegrityError
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 
 from rest_framework.test import APITransactionTestCase, RequestsClient
 
@@ -48,7 +48,7 @@ class AccountTestCase(TestCase):
     def setUp(self):
         self.data_object = test_generate_account_data(self, is_active=True)
     
-    def test_create_user(self):
+    def test_correct_create_user(self):
         """
         Test para comprobar la creación de un nuevo usuario.
         Se verifica que el usuario esta activo.
@@ -60,8 +60,20 @@ class AccountTestCase(TestCase):
         self.assertTrue(user.is_active)
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
+    
+    def test_incorrect_create_user_bad_password(self):
+        self.data_object['password'] = 'pass'
+        with self.assertRaises(ValidationError) as error: 
+            Account.objects.create_user(**self.data_object)
+        self.assertIsInstance(error.exception, ValidationError)
+    
+    def test_incorrect_create_user_without_password(self):
+        self.data_object.pop('password')
+        with self.assertRaises(ValidationError) as error: 
+            Account.objects.create_user(**self.data_object)
+        self.assertIsInstance(error.exception, ValidationError)
 
-    def test_create_user_inactive(self):
+    def test_correct_create_user_inactive(self):
         """
         Test para comprobar la creación de un nuevo usuario con el is_active a False.
         Se verifica que el usuario esta inactivo.
@@ -75,7 +87,7 @@ class AccountTestCase(TestCase):
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
     
-    def test_create_user_staff(self):
+    def test_correct_create_user_staff(self):
         """
         Test para comprobar la creación de un nuevo usuario staff.
         Se verifica que el usuario esta activo.
@@ -88,7 +100,7 @@ class AccountTestCase(TestCase):
         self.assertTrue(user.is_staff)
         self.assertFalse(user.is_superuser)
     
-    def test_create_user_superuser(self):
+    def test_correct_create_user_superuser(self):
         """
         Test para comprobar la creación de un nuevo usuario superuser.
         Se verifica que el usuario esta activo.
@@ -101,7 +113,7 @@ class AccountTestCase(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
 
-    def test_create_staff_duplicate_unique_fields(self):
+    def test_incorrect_create_staff_duplicate_unique_fields(self):
         """
         Test para comprobar que la clave de usuario y campos únicos no se repitan.
         """
@@ -110,7 +122,7 @@ class AccountTestCase(TestCase):
             Account.objects.create_user(**self.data_object)
         self.assertIsInstance(error.exception, IntegrityError)
     
-    def test_update_user(self):
+    def test_correct_update_user(self):
         """
         Test para verificar que se actualiza correctamente un usuario.
         Se verifica que aunque se envié el campo is_staff este no se actualiza
@@ -128,7 +140,7 @@ class AccountTestCase(TestCase):
         self.assertEqual(self.data_object['email'], user_update.email)
         self.assertTrue(user_update.check_password(self.data_object['password']))
     
-    def test_delete_logical(self):
+    def test_correct_delete_logical(self):
         """
         Test para comprobar que el usuario queda inactivo tras realizar un borrado lógico.
         """
@@ -137,7 +149,7 @@ class AccountTestCase(TestCase):
         user_inactive = Account.objects.delete_logical(account=user)
         self.assertFalse(user_inactive.is_active)
     
-    def test_delete_physical(self):
+    def test_correct_delete_physical(self):
         """
         Test para comprobar que el usuario queda inactivo tras realizar un borrado físico.
         Se comprueba que no existe el registro en base de datos.
@@ -146,7 +158,7 @@ class AccountTestCase(TestCase):
         self.assertTrue(Account.objects.delete_physical(account=user))
         self.assertFalse(Account.objects.filter(id=user.id).exists())
     
-    def test_revoke_privilege(self):
+    def test_correct_revoke_privilege(self):
         """
         Test para comprobar que se revocan los privilegios de is_staff y is_superuser
         """
@@ -158,7 +170,7 @@ class AccountTestCase(TestCase):
         user_update = Account.objects.revoke_is_superuser(account=user)
         self.assertFalse(user_update.is_superuser)
     
-    def test_add_privilege(self):
+    def test_correct_add_privilege(self):
         """
         Test para comprobar que se añaden los privilegios de is_staff y is_superuser
         """
@@ -254,5 +266,64 @@ class AccountRetrieveTestCase(APITransactionTestCase):
 
 
 
-    
+class AccountRegisterUserTestCase(APITransactionTestCase):
+    """
+    Se verifica que la navegación y la creación de usuarios es la correcta.
+    """
+    local_urn = '/account/register_user/'
 
+    @classmethod
+    def setUpClass(cls):
+        cls.start_time = time.time()
+        super().setUpClass()
+        print(f"\nIniciando la clase de pruebas: {cls.__name__}")
+    
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        print(f"\nFinalizando la clase de pruebas: {cls.__name__}, Tiempo transcurrido: {(time.time()-cls.start_time)}" )
+    
+    def setUp(self):
+        self.data_object = test_generate_account_data(self, is_active=True)
+        
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+    
+    def test_incorrect_register_view(self):
+        """
+        Test para comprobar que no se crea un registro en los siguientes casos
+        Caso 1: No se envía correctamente la data eliminando el campo email
+        Caso 2: No se envía correctamente la data eliminando el campo name
+        Caso 3: No se envía el campo password
+        Caso 4: Se envía una password que no cumple los requisitos
+        """
+        #Caso 1
+        data_object = self.data_object
+        data_object.pop('email')
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
+        self.assertNotEqual(response.status_code, 201)
+        #Caso 2
+        data_object = self.data_object
+        data_object.pop('name')
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
+        self.assertNotEqual(response.status_code, 201)
+        #Caso 3
+        data_object = self.data_object
+        data_object.pop('password')
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
+        self.assertNotEqual(response.status_code, 201)
+        #Caso 4
+        data_object = self.data_object
+        data_object['password'] = 'pass'
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
+        self.assertNotEqual(response.status_code, 201)
+    
+    def test_incorrect_register_view_duplicate_unique_fields(self):
+        """
+        Test para comprobar que no se crea un registro en el caso de que se intente registrar otro usuario repitiendo el mismo email
+        """
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)

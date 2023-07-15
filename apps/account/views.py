@@ -2,9 +2,15 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, permissions, status, response
 
 from apps.account.models import Account
-from apps.account.serializer import AccountRetrieveSerializer
+from apps.account.serializer import AccountUserRegisterSerializer, AccountRetrieveSerializer
 
 # Create your views here.
+class AccountUserRegisterView(generics.CreateAPIView):
+    model = Account
+    serializer_class = AccountUserRegisterSerializer
+    http_method_names = ['post']
+
+
 
 class AccountRetrieveViewSet(generics.RetrieveUpdateAPIView):
     model = Account
