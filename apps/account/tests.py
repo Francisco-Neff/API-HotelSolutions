@@ -113,7 +113,7 @@ class AccountTestCase(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
 
-    def test_incorrect_create_staff_duplicate_unique_fields(self):
+    def test_incorrect_create_user_duplicate_unique_fields(self):
         """
         Test para comprobar que la clave de usuario y campos únicos no se repitan.
         """
@@ -327,3 +327,199 @@ class AccountRegisterUserTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, 201)
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertNotEqual(response.status_code, 201)
+    
+
+
+class AccountStaffRegisterViewTestCase(APITransactionTestCase):
+    """
+    Se verifica que la navegación y la creación de usuarios tipo staff es la correcta.
+    """
+    local_urn = '/account/register_staff/'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.start_time = time.time()
+        super().setUpClass()
+        print(f"\nIniciando la clase de pruebas: {cls.__name__}")
+    
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        print(f"\nFinalizando la clase de pruebas: {cls.__name__}, Tiempo transcurrido: {(time.time()-cls.start_time)}" )
+    
+    def setUp(self):
+        self.model = Account
+        self.data_staff = test_generate_account_data(self, is_active=True)
+        self.staff = self.model.objects.create_staff(**self.data_staff)
+        self.client.force_authenticate(user=self.staff)
+        self.data_object = test_generate_account_data(self, is_active=True)
+        
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+    
+    def test_correct_update_view(self):
+        data_update = {'name':fake.name(), 'last_name':fake.last_name()}
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{self.staff.id}/', data=data_update)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(self.staff.name, response.data['user']['name'])
+        self.assertEqual(data_update['name'], response.data['user']['name'])
+        self.assertNotEqual(self.staff.last_name, response.data['user']['last_name'])
+        self.assertEqual(data_update['last_name'], response.data['user']['last_name'])
+    
+    def test_incorrect_partial_update_view(self):
+        data_update = {'name':fake.name(), 'last_name':fake.last_name()}
+        response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{self.staff.id}/', data=data_update)
+        self.assertNotEqual(response.status_code, 200)
+    
+    def test_correct_delete_physical_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_active)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        user_id = user.id
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{user_id}/delete_physical/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.filter(id=user_id).exists())
+    
+    def test_incorrect_delete_physical_view(self):
+        """
+        Test para verificar que no se desactiva el usuario si la cuenta que realiza la petición no es superuser
+        """
+        staff_id = self.staff.id
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{staff_id}/delete_physical/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=staff_id).exists())
+    
+    def test_correct_delete_logical_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_active)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{user.id}/delete_logical/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.get(id=user.id).is_active)
+    
+    def test_incorrect_delete_logical_view(self):
+        """
+        Test para verificar que no se elimina el usuario si la cuenta que realiza la petición no es superuser
+        """
+        staff_id = self.staff.id
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{staff_id}/delete_logical/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=staff_id).exists())
+
+    def test_correct_destroy_view(self):
+        """
+        Test para verificar método destroy esta deshabilitado.
+        """
+        data_update = {'name':fake.name(), 'last_name':fake.last_name()}
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{self.staff.id}/', data=data_update)
+        self.assertNotEqual(response.status_code, 200)
+    
+    def test_correct_activate_user_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_active)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/activate_user/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.get(id=user.id).is_active)
+    
+    def test_incorrect_activate_user_view(self):
+        """
+        Test para verificar que no se reactiva el usuario si la cuenta que realiza la petición no es superuser
+        """
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_active)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/activate_user/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.get(id=user.id).is_active)
+
+    def test_correct_add_staff_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_staff)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_staff/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.get(id=user.id).is_staff)
+    
+    def test_incorrect_add_staff_view(self):
+        """
+        Test para verificar que no se añade el privilegio staff si la cuenta que realiza la petición no es superuser
+        """
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_staff)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_staff/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.get(id=user.id).is_staff)
+    
+    def test_correct_revoke_staff_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_staff(**user_data)
+        self.assertTrue(user.is_staff)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_staff/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.get(id=user.id).is_staff)
+    
+    def test_incorrect_revoke_staff_view(self):
+        """
+        Test para verificar que no se restringe el privilegio superuser si la cuenta que realiza la petición no es superuser
+        """
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_staff(**user_data)
+        self.assertTrue(user.is_staff)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_staff/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.get(id=user.id).is_staff)
+    
+    def test_correct_add_superuser_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_superuser)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_superuser/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.get(id=user.id).is_superuser)
+    
+    def test_incorrect_add_superuser_view(self):
+        """
+        Test para verificar que no se añade el privilegio superuser si la cuenta que realiza la petición no es superuser
+        """
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_user(**user_data)
+        self.assertFalse(user.is_superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_superuser/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.get(id=user.id).is_superuser)
+    
+    def test_correct_revoke_superuser_view(self):
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_superuser(**user_data)
+        self.assertTrue(user.is_superuser)
+        superuser = self.model.objects.create_superuser(**self.data_object)
+        self.client.force_authenticate(user=superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_superuser/', data={})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.model.objects.get(id=user.id).is_superuser)
+    
+    def test_incorrect_revoke_superuser_view(self):
+        """
+        Test para verificar que no se restringe el privilegio superuser si la cuenta que realiza la petición no es superuser
+        """
+        user_data = test_generate_account_data(self, is_active=False)
+        user = self.model.objects.create_superuser(**user_data)
+        self.assertTrue(user.is_superuser)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_superuser/', data={})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.get(id=user.id).is_superuser)
