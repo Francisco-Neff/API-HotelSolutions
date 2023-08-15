@@ -1,10 +1,10 @@
 # HOTEL SOLUTIONS   
 -----
-API para la administración de habitaciones y reservas de un hotel.
+API for the management of rooms and reservations in a hotel.
 -----
 
-## Aplicaciones
+## Applications
 - [Account](#account)
 
 ### Account
-Lleva el registro de los diferentes usuarios de todo el proyecto en BBDD, como los diferentes métodos que esta aplicación pueda necesitar para trabajar con los registros.
+Manages the records of various users throughout the project in the database, as well as the different methods this application may need to work with the records.

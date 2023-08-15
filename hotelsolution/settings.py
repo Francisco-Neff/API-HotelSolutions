@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     #Third APPS
     'rest_framework',
     'rest_framework_simplejwt',
-    'oauth2_provider',
+    'drf_yasg',
 
     #Local APPS
     'apps.account',
@@ -65,29 +65,27 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'hotelsolution.urls'
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = 'hotelsolution.wsgi.application'
+# OpenAPI/SWAGGER Configuration
+SWAGGER_SETTINGS = {
+    'DOC_EXPANSION': 'list',
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'SECURITY_DEFINITIONS': {
+        'Token': {
+           'type': 'apiKey',
+           'name': 'Authorization',
+           'in': 'header'
+        }
+      },
+}
 
 # (DRF) DjangoRestFramework Configurations
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly'
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     ],
 }
 
@@ -133,6 +131,24 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'hotelsolution.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -187,3 +203,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL='/admin/login/'
