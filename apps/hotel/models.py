@@ -65,7 +65,7 @@ class Room(models.Model):
     room_type = models.CharField(verbose_name=_('Type of room'), max_length=15, null=False, unique=False, choices=ChoicesTypeRoom.choices, default=ChoicesTypeRoom.unknown)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey(Account, related_name='update_by_reference', null=True, on_delete=models.SET_NULL)
+    updated_by = models.ForeignKey(Account, related_name='update_by_room_reference', null=True, on_delete=models.SET_NULL)
    
     class Meta:
         verbose_name = _('Room')
