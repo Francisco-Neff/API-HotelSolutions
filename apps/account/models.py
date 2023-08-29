@@ -134,6 +134,8 @@ class AccountManager(BaseUserManager):
         return account
 
 
+
+
 class Account(AbstractBaseUser,PermissionsMixin):
     email = models.EmailField(verbose_name=_('Email'),max_length=250, unique=True)
     full_name = models.CharField(verbose_name=_('Full Name'), max_length=350, unique=False)
