@@ -16,7 +16,7 @@ LOCAL_URL = 'http://127.0.0.1:8000'
 PASSWORD = '12345678*Abc'
 
 
-def test_generate_account_data(self, is_active=None):
+def test_generate_account_data(is_active=None):
     data_object = {
         'email' : fake.email(),
         'full_name' : fake.name(),
@@ -49,7 +49,7 @@ class VerifyJWTokenTestCase(APITransactionTestCase):
     
     def setUp(self):
         self.model = Account
-        self.data_object = test_generate_account_data(self, is_active=True)
+        self.data_object = test_generate_account_data(is_active=True)
         self.user = self.model.objects.create_user(**self.data_object)
         self.jwt_token = f"JWT {self.client.post(reverse('token_obtain_pair'),data={'email': self.user.email, 'password': PASSWORD}).data['access']}"
         
@@ -77,7 +77,7 @@ class AccountTestCase(TestCase):
         print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
     
     def setUp(self):
-        self.data_object = test_generate_account_data(self, is_active=True)
+        self.data_object = test_generate_account_data(is_active=True)
     
     def test_correct_create_user(self):
         """
@@ -110,7 +110,7 @@ class AccountTestCase(TestCase):
         It is checked that the user is inactive.
         It is verified that is_staff is False and is_superuser is False.
         """
-        self.data_object = test_generate_account_data(self, is_active=False)
+        self.data_object = test_generate_account_data(is_active=False)
         user = Account.objects.create_user(**self.data_object)
         self.assertTrue(Account.objects.filter(id=user.id).exists())
         self.assertTrue(Account.objects.filter(email = self.data_object['email']).exists())
@@ -237,7 +237,7 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         """
         User creation and obtaining the JWT_TOKEN to verify navigation.
         """
-        self.data_object = test_generate_account_data(self, is_active=True)
+        self.data_object = test_generate_account_data(is_active=True)
         self.user = Account.objects.create_user(**self.data_object)
         self.jwt_token = f"JWT {self.client.post(reverse('token_obtain_pair'),data={'email': self.user.email, 'password': PASSWORD}).data['access']}"
         
@@ -255,7 +255,7 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         Ensuring that data from another user is not accessed while authenticated with a different user.
         """
         #Create another account
-        data_object = test_generate_account_data(self, is_active=True)
+        data_object = test_generate_account_data(is_active=True)
         user = Account.objects.create_user(**data_object)
         jwt_token = f"JWT {self.client.post(reverse('token_obtain_pair'),data={'email': user.email, 'password': PASSWORD}).data['access']}"
         #Request with other id
@@ -282,7 +282,7 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         Ensuring that data of another user isn't updated while authenticated with a different user.
         """
         #Creación another account.
-        data_object = test_generate_account_data(self, is_active=True)
+        data_object = test_generate_account_data(is_active=True)
         user = Account.objects.create_user(**data_object)
         jwt_token = f"JWT {self.client.post(reverse('token_obtain_pair'),data={'email': user.email, 'password': PASSWORD}).data['access']}"
         self.client.credentials(HTTP_AUTHORIZATION=jwt_token)
@@ -313,7 +313,7 @@ class AccountRegisterUserTestCase(APITransactionTestCase):
         print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
     
     def setUp(self):
-        self.data_object = test_generate_account_data(self, is_active=True)
+        self.data_object = test_generate_account_data(is_active=True)
         
     def test_correct_register_view(self):
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
@@ -378,10 +378,10 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
     
     def setUp(self):
         self.model = Account
-        self.data_staff = test_generate_account_data(self, is_active=True)
+        self.data_staff = test_generate_account_data(is_active=True)
         self.staff = self.model.objects.create_staff(**self.data_staff)
         self.client.force_authenticate(user=self.staff)
-        self.data_object = test_generate_account_data(self, is_active=True)
+        self.data_object = test_generate_account_data(is_active=True)
         
     def test_correct_register_view(self):
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
@@ -404,7 +404,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertEqual(data_update['full_name'], response.data['user']['full_name'])
     
     def test_correct_delete_physical_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_active)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -424,7 +424,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertTrue(self.model.objects.filter(id=staff_id).exists())
     
     def test_correct_delete_logical_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_active)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -451,7 +451,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, 405)
     
     def test_correct_activate_user_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_active)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -464,7 +464,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         """
         Test to verify that the user is not reactivated if the requesting account is not a superuser.
         """
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_active)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/activate_user/', data={})
@@ -472,7 +472,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertFalse(self.model.objects.get(id=user.id).is_active)
 
     def test_correct_add_staff_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_staff)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -485,7 +485,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         """
         Test to verify that the staff privilege is not added if the requesting account is not a superuser.
         """
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_staff)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_staff/', data={})
@@ -493,7 +493,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertFalse(self.model.objects.get(id=user.id).is_staff)
     
     def test_correct_revoke_staff_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_staff(**user_data)
         self.assertTrue(user.is_staff)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -506,7 +506,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         """
         Test to verify that the superuser privilege is not restricted if the requesting account is not a superuser.
         """
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_staff(**user_data)
         self.assertTrue(user.is_staff)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_staff/', data={})
@@ -514,7 +514,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertTrue(self.model.objects.get(id=user.id).is_staff)
     
     def test_correct_add_superuser_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_superuser)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -527,7 +527,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         """
         Test to verify that the superuser privilege is not added if the requesting account is not a superuser.
         """
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_user(**user_data)
         self.assertFalse(user.is_superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_superuser/', data={})
@@ -535,7 +535,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertFalse(self.model.objects.get(id=user.id).is_superuser)
     
     def test_correct_revoke_superuser_view(self):
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_superuser(**user_data)
         self.assertTrue(user.is_superuser)
         superuser = self.model.objects.create_superuser(**self.data_object)
@@ -548,7 +548,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         """
         Test to verify that the superuser privilege is not restricted if the requesting account is not a superuser.
         """
-        user_data = test_generate_account_data(self, is_active=False)
+        user_data = test_generate_account_data(is_active=False)
         user = self.model.objects.create_superuser(**user_data)
         self.assertTrue(user.is_superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_superuser/', data={})
@@ -576,10 +576,10 @@ class AccountRegisterSuperUserTestCase(APITransactionTestCase):
     
     def setUp(self):
         self.model = Account
-        self.data_superuser = test_generate_account_data(self, is_active=True)
+        self.data_superuser = test_generate_account_data(is_active=True)
         self.superuser = self.model.objects.create_superuser(**self.data_superuser)
         self.client.force_authenticate(user=self.superuser)
-        self.data_object = test_generate_account_data(self, is_active=True)
+        self.data_object = test_generate_account_data(is_active=True)
         
     def test_correct_register_view(self):
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
@@ -618,7 +618,7 @@ class AccountRegisterSuperUserTestCase(APITransactionTestCase):
         self.assertNotEqual(response.status_code, 201)
         #Case 5
         data_object = self.data_object
-        user_staff = test_generate_account_data(self, is_active=False)
+        user_staff = test_generate_account_data(is_active=False)
         user = self.model.objects.create_staff(**user_staff)
         self.client.force_authenticate(user=user)
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)

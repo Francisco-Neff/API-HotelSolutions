@@ -1,9 +1,10 @@
-from typing import Type
-from django.db.models.manager import BaseManager
+import os
+
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 
 from apps.account.models import Account
 
@@ -29,13 +30,15 @@ class Hotel(models.Model):
 
     def update_model(self, model_object=None, **extra_fields):
         if model_object is None or not isinstance(model_object, Hotel):
-            raise ValidationError(message=_('The object can´t be updated.'))
+            raise ValidationError(message=_('The object can`t be updated.'))
         
         for field, value in extra_fields.items():
             setattr(model_object, field, value)
 
         model_object.save()
         return model_object
+
+
 
 
 class HotelMedia(models.Model):
@@ -46,6 +49,28 @@ class HotelMedia(models.Model):
     class Meta:
         verbose_name = _('Hotel Media')
         verbose_name_plural = _('Hotel Media')
+    
+    def update_model(self, model_object=None, **extra_fields):
+        if model_object is None or not isinstance(model_object, HotelMedia):
+            raise ValidationError(message=_('The object can`t be updated.'))
+        
+        old_img_path = None
+        if 'img' in extra_fields.keys():
+            old_img_path = model_object.img.path
+        
+        for field, value in extra_fields.items():
+            setattr(model_object, field, value)
+
+        if old_img_path is not None:
+            if os.path.exists(old_img_path):
+                os.remove(old_img_path)
+
+        model_object.save()
+        return model_object
+    
+    def delete(self, using=None, keep_parents=False):
+        self.img.delete()
+        super().delete(using=using, keep_parents=keep_parents)
 
 
 
@@ -76,7 +101,7 @@ class Room(models.Model):
     class Meta:
         verbose_name = _('Room')
         verbose_name_plural = _('Rooms')
-        constraints = [models.UniqueConstraint(fields=['name', 'number', 'id_hotel'], name="unique_name_number_per_hotel") ]
+        constraints = [models.UniqueConstraint(fields=['name', 'number', 'id_hotel'], name="unique_name_number_per_hotel")]
     
     def __str__(self):
         if self.name and self.number:
@@ -114,10 +139,66 @@ class RoomMedia(models.Model):
     id_rooms = models.ManyToManyField(Room, related_name='room_media_reference', blank=False)
     img = models.ImageField(upload_to='media_room/')
 
-
     class Meta:
         verbose_name = _('Room Media')
         verbose_name_plural = _('Rooms Media')
+
+    def create_model(self, **extra_fields):
+        if not 'id_rooms' in extra_fields.keys():
+            raise ValidationError(message=_('Do you need send the "id_rooms" field.'))
+        if not isinstance(extra_fields.get('id_rooms'), list):
+            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
+        try:
+            id_rooms = extra_fields.pop('id_rooms')
+            model_object = RoomMedia(
+                **extra_fields
+            )
+            model_object.save()
+            model_object.add_rooms(id_rooms=id_rooms)
+            return model_object
+        except Exception as e:
+            raise ValidationError(message=e)
+
+    def add_rooms(self, id_rooms):
+        if not isinstance(id_rooms, list):
+            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
+        try:
+            for id_room in id_rooms:
+                room = get_object_or_404(Room, pk=id_room)
+                self.id_rooms.add(room.id)
+        except Exception as e:
+            raise ValidationError(message=e)
+
+    def update_model(self, model_object=None, **extra_fields):
+        if model_object is None or not isinstance(model_object, RoomMedia):
+            raise ValidationError(message=_('The object can`t be updated.'))
+        
+        old_img_path = None
+        if 'img' in extra_fields.keys():
+            old_img_path = model_object.img.path
+
+        if 'id_rooms' in extra_fields.keys():
+            model_object.add_rooms(id_rooms=extra_fields.get('id_rooms'))
+            
+        if old_img_path is not None:
+            if os.path.exists(old_img_path):
+                os.remove(old_img_path)
+
+        model_object.save()
+        return model_object
+    
+    def delete_item_room(self, id_room):
+        if id_room is None or not isinstance(id_room, Room):
+            raise ValidationError(message=_('The object can`t be updated.'))
+        
+        try:
+            self.id_rooms.remove(id_room)
+        except:
+            raise ValidationError(message=_('The object can`t delete room selected.'))
+    
+    def delete(self, using=None, keep_parents=False):
+        self.img.delete()
+        super().delete(using=using, keep_parents=keep_parents)
 
 
 
@@ -125,7 +206,7 @@ class RoomMedia(models.Model):
 class RoomExtra(models.Model):
     id_rooms = models.ManyToManyField(Room, related_name='room_extra_reference', blank=False)
     has_internet = models.BooleanField(verbose_name=_('Room with internet'), default=False)
-    has_tv = models.BooleanField(verbose_name=_('Room with TV'), default=False)
+    has_tv = models.BooleanField(verbose_name=_('Room with TV'), default=False)  
 
 
     class Meta:
