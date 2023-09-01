@@ -212,3 +212,65 @@ class RoomExtra(models.Model):
     class Meta:
         verbose_name = _('Room Extra')
         verbose_name_plural = _('Rooms Extra')
+
+    def create_or_update_model(self, **extra_fields):
+        if 'id_rooms' in extra_fields.keys():
+            booleans_value = extra_fields.copy()
+            booleans_value.pop('id_rooms')
+        else:
+            booleans_value = extra_fields.copy()
+
+        model_object = RoomExtra.objects.filter(**booleans_value)
+        if model_object.exists():
+            model_object = RoomExtra.update_model(self, model_object=model_object.first(), **extra_fields)
+        else:
+            model_object = RoomExtra.create_model(self, **extra_fields)
+        return model_object
+
+    def create_model(self, **extra_fields):
+        if not 'id_rooms' in extra_fields.keys():
+            raise ValidationError(message=_('Do you need send the "id_rooms" field.'))
+        if not isinstance(extra_fields.get('id_rooms'), list):
+            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
+        try:
+            id_rooms = extra_fields.pop('id_rooms')
+            model_object = RoomExtra(
+                **extra_fields
+            )
+            model_object.save()
+            model_object.add_rooms(id_rooms=id_rooms)
+            return model_object
+        except Exception as e:
+            raise ValidationError(message=e)
+
+    def add_rooms(self, id_rooms):
+        if not isinstance(id_rooms, list):
+            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
+        try:
+            for id_room in id_rooms:
+                room = get_object_or_404(Room, pk=id_room)
+                if RoomExtra.objects.filter(id_rooms=room).exclude(id=self.id).count() > 0:
+                    for record in RoomExtra.objects.filter(id_rooms=room):
+                        record.delete_item_room(room)
+                self.id_rooms.add(room.id)
+        except Exception as e:
+            raise ValidationError(message=e)
+
+    def update_model(self, model_object=None, **extra_fields):
+        if model_object is None or not isinstance(model_object, RoomExtra):
+            raise ValidationError(message=_('The object can`t be updated.'))
+
+        if 'id_rooms' in extra_fields.keys():
+            model_object.add_rooms(id_rooms=extra_fields.get('id_rooms'))
+            
+        model_object.save()
+        return model_object
+
+    def delete_item_room(self, id_room):
+        if id_room is None or not isinstance(id_room, Room):
+            raise ValidationError(message=_('The object can`t be updated.'))
+        
+        try:
+            self.id_rooms.remove(id_room)
+        except:
+            raise ValidationError(message=_('The object can`t delete room selected.'))

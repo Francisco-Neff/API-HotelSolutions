@@ -59,6 +59,18 @@ def test_generate_room_media_data(id_rooms, name_file='room_media_test_example.p
     return data_object
 
 
+def test_generate_room_extra_data(id_rooms, has_internet=False, has_tv=False):
+    """
+    The "id_rooms" field should be a list of IDs, like a id_rooms = [1, 2, 3, ..., n]
+    """
+    data_object = {
+        'id_rooms' : id_rooms,
+        'has_internet' : has_internet,
+        'has_tv' : has_tv
+    }
+    return data_object
+
+
 
 
 class HotelTestCase(TestCase):
@@ -199,6 +211,7 @@ class RoomTestCase(TestCase):
         self.assertIsNotNone(model_object.updated_at)
         self.assertEqual(model_object.id_hotel, self.hotel)
         self.assertEqual(model_object.updated_by, self.account)
+        self.assertEqual(model_object.price, self.data_object['price'])
     
     def test_incorrect_create_model(self):
         """
@@ -325,3 +338,91 @@ class RoomMediaTestCase(TestCase):
         model_object.delete()
         self.assertFalse(self.model.objects.filter(id=model_object.id).exists())
         self.model_object = None
+
+
+
+
+class RoomExtraTestCase(TestCase):
+    """
+    Test to verify the creation of RoomMedia model objects.
+    """
+    @classmethod
+    def setUpClass(self):
+        self.start_time = time.time()
+        super().setUpClass()
+        print(f"\nStarting the testing class: {self.__name__}")
+    
+    @classmethod
+    def tearDownClass(self):
+        super().tearDownClass()
+        print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
+    
+    def setUp(self):
+        self.model = RoomExtra
+        self.account = Account.objects.create_staff(**test_generate_account_data(is_active=True))
+        self.hotel =  Hotel.objects.create(**test_generate_hotel_data(account=self.account))
+        self.room = Room.objects.create(**test_generate_room_data(hotel=self.hotel, account=self.account))
+        self.data_object = test_generate_room_extra_data(id_rooms=[self.room.id])
+    
+    def test_correct_create_model(self):
+        model_object = self.model.create_model(self, **self.data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        self.assertTrue(model_object.id_rooms.filter(id=self.room.id).exists())
+    
+    def test_correct_update_model(self):
+        model_object = self.model.create_or_update_model(self, **self.data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        self.assertTrue(model_object.id_rooms.filter(id=self.room.id).exists())
+        data_object_upt = self.data_object.copy()
+        room = Room.objects.create(**test_generate_room_data(hotel=self.hotel, account=self.account))
+        data_object_upt['id_rooms'].append(room.id)
+        model_object = self.model.update_model(self, model_object=model_object, **self.data_object)
+        self.assertEqual(model_object.id_rooms.count(), len(data_object_upt['id_rooms']))  
+        self.assertTrue(model_object.id_rooms.filter(id__in=data_object_upt['id_rooms']).exists())  
+    
+    def test_correct_create_or_update_model(self):
+        """
+        Test to verify the proper functioning of the create_or_update_model method. Additionally, 
+        it is validated that duplicate records are not created in id_rooms, 
+        leaving this field unique based on the booleans.
+        Case 1: Create record
+        Case 2: Update record
+        Case 3: Creation of a new record and updating it with the already created rooms.
+        """
+        #Case 1
+        model_object = self.model.create_or_update_model(self, **self.data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        self.assertTrue(model_object.id_rooms.filter(id=self.room.id).exists())  
+        #Case 2
+        data_object_upt = self.data_object.copy()
+        room = Room.objects.create(**test_generate_room_data(hotel=self.hotel, account=self.account))
+        data_object_upt['id_rooms'].append(room.id)
+        model_object = self.model.create_or_update_model(self, **self.data_object)
+        self.assertEqual(model_object.id_rooms.count(), len(data_object_upt['id_rooms']))  
+        self.assertTrue(model_object.id_rooms.filter(id__in=data_object_upt['id_rooms']).exists())  
+        #Case 3
+        data_object = test_generate_room_extra_data(id_rooms=[self.room.id], has_internet=True)
+        model_object = self.model.create_or_update_model(self, **data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        self.assertTrue(model_object.id_rooms.filter(id=self.room.id).exists())
+        self.assertEqual(1, self.model.objects.filter(id_rooms=room).count())
+        data_object['id_rooms'].append(room.id)
+        model_object = self.model.create_or_update_model(self, **data_object)
+        self.assertEqual(model_object.id_rooms.count(), len(data_object['id_rooms']))  
+        self.assertTrue(model_object.id_rooms.filter(id__in=data_object['id_rooms']).exists())
+        self.assertEqual(1, self.model.objects.filter(id_rooms=room).count())
+
+    def test_correct_delete_item(self):
+        model_object = self.model.create_or_update_model(self, **self.data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        self.assertTrue(model_object.id_rooms.filter(id=self.room.id).exists())   
+        model_object.delete_item_room(id_room=self.room)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        self.assertFalse(model_object.id_rooms.filter(id=self.room.id).exists()) 
+
+    def test_correct_delete_model(self):
+        model_object = self.model.create_or_update_model(self, **self.data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        model_object.delete()
+        self.assertFalse(self.model.objects.filter(id=model_object.id).exists())
+
