@@ -1,13 +1,24 @@
 # HOTEL SOLUTIONS   
------
-API para la administración de habitaciones y reservas de un hotel.
------
 
+API para la administración de habitaciones y reservas de un hotel.
+
+En este proyecto no se utilizaran librerías ni dependencias de terceros que faciliten ciertas soluciones como puede ser `django-simple-history` para sistema de bitácora de registros o `django-storages` para el almacenamiento de los diferentes archivos.
+
+---
 ## Aplicaciones
 - [Account](#account)
+- [Hotel](#hotel)
 
 ### Account
-Lleva el registro de los diferentes usuarios de todo el proyecto en BBDD, como los diferentes métodos que esta aplicación pueda necesitar para trabajar con los registros.
+Lleva el registro de los diferentes usuarios de todo el servicio en BD, como los diferentes métodos que esta aplicación pueda necesitar para trabajar con los registros.
+
+### Hotel
+Almacena los diferentes registros de hoteles y habitaciones junto a su información, como contenidos media, en BD como los diferentes métodos que esta aplicación pueda necesitar.
+
+## UML
+**NOTA:** Modelo de datos simplificado para visualizar el contenido de todos los modelos y sus campos, si necesita mas información especifica como nombre de tablas o relaciones en los casos muchos a muchos puede visualizar el contenido de la base de datos generada tras utilizar los métodos `makemigrations` y `migrate`.
+
+![Diagrama UML](UML/HotelSolutions_API-Rest.png)
 
 ## Despliegue
 

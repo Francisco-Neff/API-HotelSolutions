@@ -1,0 +1,64 @@
+@startuml HotelSolutions_API-Rest
+class Account {
+    id: BigAutoField
+    email: EmailField
+    full_name: CharField
+    is_staff: BooleanField
+    is_active: BooleanField
+    is_superuser: BooleanField
+}
+
+class Hotel {
+    id: BigAutoField
+    name: CharField
+    address: CharField
+    descripttion: TextField
+    starts: PositiveSmallInteger
+    created_at: DateTimeField
+    updated_at: DateTimeField
+    updated_by: ForeignKey
+}
+
+class HotelMedia {
+    id: BigAutoField
+    id_hotel: ForeignKey
+    img: ImageField
+}
+
+class Room {
+    id: BigAutoField
+    id_hotel: ForeignKey
+    name: CharField
+    descripttion: TextField
+    number: PositiveSmallInteger
+    room_status: CharField
+    price: DecimalField
+    room_capacity: PositiveSmallInteger
+    num_bed: PositiveSmallInteger
+    created_at: DateTimeField
+    updated_at: DateTimeField
+    updated_by: ForeignKey
+}
+
+class RoomMedia {
+    id: BigAutoField
+    id_rooms: ManyToManyField
+    img: ImageField
+}
+
+class RoomExtra {
+    id: BigAutoField
+    id_rooms: ManyToManyField
+    has_internet: BooleanField
+    has_tv: BooleanField
+}
+
+
+Account "1..1" <--> "1..1" Hotel
+Account "1..1" <--> "1..1" Room
+Hotel "1..*" <--> "1..1" HotelMedia
+Hotel "1..*" <-right-> "1..1" Room
+Room "1..*" <--> "1..*" RoomMedia
+Room "1..*" <--> "1..1" RoomExtra
+
+@enduml
