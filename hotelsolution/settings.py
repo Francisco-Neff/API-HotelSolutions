@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'hotelsolution.middleware.AddCodMiddleware',
 ]
 
 ROOT_URLCONF = 'hotelsolution.urls'
