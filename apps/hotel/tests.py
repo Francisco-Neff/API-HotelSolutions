@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 
+from rest_framework.test import APITransactionTestCase
+
 from apps.account.tests import test_generate_account_data
 from apps.hotel.models import Account, Hotel, HotelMedia, Room, RoomMedia, RoomExtra
 
@@ -425,4 +427,117 @@ class RoomExtraTestCase(TestCase):
         self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
         model_object.delete()
         self.assertFalse(self.model.objects.filter(id=model_object.id).exists())
+
+
+
+
+class HotelRegisterTestCase(APITransactionTestCase):
+    """
+    It is verified that hotel navigation are correct.
+    """
+    local_urn = '/hotel/register/hotel/'
+
+    @classmethod
+    def setUpClass(self):
+        self.start_time = time.time()
+        super().setUpClass()
+        print(f"\nStarting the testing class: {self.__name__}")
+    
+    @classmethod
+    def tearDownClass(self):
+        super().tearDownClass()
+        print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
+    
+    def setUp(self):
+        self.model = Hotel
+        self.account = Account.objects.create_staff(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        self.data_object = test_generate_hotel_data(account=self.account.id)
+    
+    def test_incorrect_permission_request(self):
+        """
+        The test to verify that creating new records or do another request, fails in cases where the requesting user is not of administrator type.
+        """
+        self.account = Account.objects.create_user(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('cod', response.data)
+    
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.updated_by, self.account)
+        self.assertEqual(model_object.address, self.data_object['address'])
+        self.assertEqual(model_object.name, self.data_object['name'])
+    
+    def test_incorrect_register_view(self):
+        """
+        Test to verify that the creation of new records fails in the following cases:
+        #Case 1: Duplicate data.
+        #Case 2: Field updated_by don't exists.
+        """
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        #Case 1
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        #Case 2
+        case2 = True
+        while case2:
+            fake_id = fake.pyint(min_value=8000, max_value=9000)
+            if not Account.objects.filter(id=fake_id).exists():
+                case2 = False
+        self.data_object['updated_by'] = fake_id
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+
+    def test_correct_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        data_object_upt = self.data_object.copy()
+        data_object_upt['name'] = fake.name()
+        data_object_upt['stars'] = fake.pyint(max_value=5)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{response.data["id"]}/', data=data_object_upt)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.name, data_object_upt['name'])
+        self.assertEqual(model_object.stars, data_object_upt['stars'])
+    
+    def test_correct_partial_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        data_object_upt = {
+            'name': fake.name(),
+            'stars': fake.pyint(max_value=5)
+        }
+        response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{response.data["id"]}/', data=data_object_upt)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.name, data_object_upt['name'])
+        self.assertEqual(model_object.stars, data_object_upt['stars'])
+    
+    def test_correct_delete_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        current_id = response.data["id"]
+        self.assertTrue(self.model.objects.filter(id=current_id).exists())
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{current_id}/')
+        self.assertEqual(response.status_code, 204)
+        self.assertIn('cod', response.data)
+        self.assertFalse(self.model.objects.filter(id=current_id).exists())
 

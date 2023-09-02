@@ -57,6 +57,7 @@ class VerifyJWTokenTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.jwt_token)
         response = self.client.get(f'{LOCAL_URL}{self.local_urn}{self.user.id}/')
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
 
 
 
@@ -245,10 +246,12 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=self.jwt_token)
         response = self.client.get(f'{LOCAL_URL}{self.local_urn}{self.user.id}/')
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
     
     def test_incorrect_retrieve_view_without_credentials(self):
         response = self.client.get(f'{LOCAL_URL}{self.local_urn}{self.user.id}/')
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
 
     def test_incorrect_retrieve_view_with_bad_credentials(self):
         """
@@ -262,12 +265,14 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         self.client.credentials(HTTP_AUTHORIZATION=jwt_token)
         response = self.client.get(f'{LOCAL_URL}{self.local_urn}{self.user.id}/')
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
     
     def test_correct_update_view(self):
         self.client.credentials(HTTP_AUTHORIZATION=self.jwt_token)
         data_update = {'full_name':fake.name()}
         response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{self.user.id}/', data=data_update)
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertNotEqual(self.user.full_name, response.data['user']['full_name'])
         self.assertEqual(data_update['full_name'], response.data['user']['full_name'])
     
@@ -275,6 +280,7 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         data_update = {'full_name':fake.name()}
         response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{self.user.id}/', data=data_update)
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertNotIn('user', response.data)
     
     def test_incorrect_update_view_bad_credentials(self):
@@ -290,6 +296,7 @@ class AccountRetrieveTestCase(APITransactionTestCase):
         data_update = {'full_name':fake.name()}
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{self.user.id}/', data=data_update)
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertNotIn('user', response.data)
         
 
@@ -318,6 +325,7 @@ class AccountRegisterUserTestCase(APITransactionTestCase):
     def test_correct_register_view(self):
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
     
     def test_incorrect_register_view(self):
         """
@@ -332,21 +340,25 @@ class AccountRegisterUserTestCase(APITransactionTestCase):
         data_object.pop('email')
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 2
         data_object = self.data_object
         data_object.pop('full_name')
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 3
         data_object = self.data_object
         data_object.pop('password')
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 4
         data_object = self.data_object
         data_object['password'] = 'pass'
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
     
     def test_incorrect_register_view_duplicate_unique_fields(self):
         """
@@ -356,7 +368,9 @@ class AccountRegisterUserTestCase(APITransactionTestCase):
         self.assertEqual(response.status_code, 201)
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
     
+
 
 
 class AccountStaffRegisterViewTestCase(APITransactionTestCase):
@@ -386,6 +400,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
     def test_correct_register_view(self):
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
     
     def test_incorrect_update_view(self):
         """
@@ -394,12 +409,15 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         data_update = {'full_name':fake.name()}
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{self.staff.id}/', data=data_update)
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertEqual(response.status_code, 405)
+        self.assertIn('cod', response.data)
     
     def test_correct_partial_update_view(self):
         data_update = {'full_name':fake.name()}
         response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{self.staff.id}/', data=data_update)
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertNotEqual(self.staff.full_name, response.data['user']['full_name'])
         self.assertEqual(data_update['full_name'], response.data['user']['full_name'])
     
@@ -412,6 +430,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         user_id = user.id
         response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{user_id}/delete_physical/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.filter(id=user_id).exists())
     
     def test_incorrect_delete_physical_view(self):
@@ -421,6 +440,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         staff_id = self.staff.id
         response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{staff_id}/delete_physical/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.filter(id=staff_id).exists())
     
     def test_correct_delete_logical_view(self):
@@ -431,6 +451,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=superuser)
         response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{user.id}/delete_logical/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.get(id=user.id).is_active)
     
     def test_incorrect_delete_logical_view(self):
@@ -440,6 +461,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         staff_id = self.staff.id
         response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{staff_id}/delete_logical/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.filter(id=staff_id).exists())
 
     def test_correct_destroy_view(self):
@@ -448,7 +470,9 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         """
         response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{self.staff.id}/')
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertEqual(response.status_code, 405)
+        self.assertIn('cod', response.data)
     
     def test_correct_activate_user_view(self):
         user_data = test_generate_account_data(is_active=False)
@@ -458,6 +482,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/activate_user/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.get(id=user.id).is_active)
     
     def test_incorrect_activate_user_view(self):
@@ -469,6 +494,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertFalse(user.is_active)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/activate_user/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.get(id=user.id).is_active)
 
     def test_correct_add_staff_view(self):
@@ -479,6 +505,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_staff/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.get(id=user.id).is_staff)
     
     def test_incorrect_add_staff_view(self):
@@ -490,6 +517,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertFalse(user.is_staff)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_staff/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.get(id=user.id).is_staff)
     
     def test_correct_revoke_staff_view(self):
@@ -500,6 +528,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_staff/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.get(id=user.id).is_staff)
     
     def test_incorrect_revoke_staff_view(self):
@@ -511,6 +540,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertTrue(user.is_staff)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_staff/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.get(id=user.id).is_staff)
     
     def test_correct_add_superuser_view(self):
@@ -521,6 +551,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_superuser/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.get(id=user.id).is_superuser)
     
     def test_incorrect_add_superuser_view(self):
@@ -532,6 +563,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertFalse(user.is_superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/add_superuser/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.get(id=user.id).is_superuser)
     
     def test_correct_revoke_superuser_view(self):
@@ -542,6 +574,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_superuser/', data={})
         self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.get(id=user.id).is_superuser)
     
     def test_incorrect_revoke_superuser_view(self):
@@ -553,6 +586,7 @@ class AccountStaffRegisterViewTestCase(APITransactionTestCase):
         self.assertTrue(user.is_superuser)
         response = self.client.put(f'{LOCAL_URL}{self.local_urn}{user.id}/revoke_superuser/', data={})
         self.assertNotEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
         self.assertTrue(self.model.objects.get(id=user.id).is_superuser)
     
 
@@ -584,6 +618,7 @@ class AccountRegisterSuperUserTestCase(APITransactionTestCase):
     def test_correct_register_view(self):
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         model_object = self.model.objects.get(id=response.data['user']['id'])
         self.assertTrue(model_object.is_superuser)
     
@@ -601,21 +636,25 @@ class AccountRegisterSuperUserTestCase(APITransactionTestCase):
         data_object.pop('email')
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 2
         data_object = self.data_object
         data_object.pop('full_name')
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 3
         data_object = self.data_object
         data_object.pop('password')
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 4
         data_object = self.data_object
         data_object['password'] = 'pass'
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         #Case 5
         data_object = self.data_object
         user_staff = test_generate_account_data(is_active=False)
@@ -623,6 +662,7 @@ class AccountRegisterSuperUserTestCase(APITransactionTestCase):
         self.client.force_authenticate(user=user)
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
     
     def test_incorrect_register_view_duplicate_unique_fields(self):
         """
@@ -630,6 +670,8 @@ class AccountRegisterSuperUserTestCase(APITransactionTestCase):
         """
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
     
