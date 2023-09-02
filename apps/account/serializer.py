@@ -9,7 +9,7 @@ from apps.account.models import Account
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        fields = ('id', 'name', 'codename')
+        fields = ['id', 'name', 'codename']
 
 
 
@@ -17,7 +17,7 @@ class PermissionSerializer(serializers.ModelSerializer):
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
-        fields = ('id', 'name')
+        fields = ['id', 'name']
 
 
 
