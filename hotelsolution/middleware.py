@@ -11,7 +11,7 @@ class AddCodMiddleware:
         response = self.get_response(request)
 
         #This verification will not be performed for 5XX error types.
-        if not str(response.status_code).startswith('5') or not response.data:
+        if not str(response.status_code).startswith('5'):
             if response.data:
                 if not 'cod' in response.data.keys():
                     self.__add_cod(response)
