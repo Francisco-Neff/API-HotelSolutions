@@ -88,7 +88,7 @@ class Room(models.Model):
     id_hotel = models.ForeignKey(Hotel, related_name='hotel_reference', on_delete=models.RESTRICT)
     name = models.CharField(verbose_name=_('Room name'), max_length=250, null=True, unique=False, blank=True)
     description = models.TextField(verbose_name=_('Description'), max_length=5000, null=True, unique=False, blank=True)
-    number = models.PositiveSmallIntegerField(verbose_name=_('Number'))
+    number = models.PositiveSmallIntegerField(verbose_name=_('Number'), null=True, blank=True)
     room_status = models.CharField(verbose_name=_('Status of room'), max_length=15, null=False, unique=False, choices=ChoicesStatusRoom.choices, default=ChoicesStatusRoom.available)
     price = models.DecimalField(verbose_name=_('Price per night'), unique=False, max_digits=6, decimal_places=2, default=0)
     room_capacity = models.PositiveSmallIntegerField(verbose_name=_('Guest Capacity'), validators=[MinValueValidator(1), MaxValueValidator(10)], default=1)
@@ -120,7 +120,7 @@ class Room(models.Model):
 
     def update_model(self, model_object=None, **extra_fields):
         if model_object is None or not isinstance(model_object, Room):
-            raise ValidationError(message=_('The object can´t be updated.'))
+            raise ValidationError(message=_('The object can`t be updated.'))
         
         for field, value in extra_fields.items():
             setattr(model_object, field, value)
@@ -131,6 +131,19 @@ class Room(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+    
+    def add_rooms(self, model_object=None, id_rooms=None):
+        if model_object is None or id_rooms is None:
+            raise ValidationError(message=_('The "id_rooms" field and records is necessary.'))
+        if not isinstance(id_rooms, list):
+            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
+        try:
+            for id_room in id_rooms:
+                if not isinstance(id_room, Room):
+                    id_room = get_object_or_404(Room, pk=id_room)
+                model_object.id_rooms.add(id_room.id)
+        except Exception as e:
+            raise ValidationError(message=e)
 
     
 
@@ -138,6 +151,7 @@ class Room(models.Model):
 class RoomMedia(models.Model):
     id_rooms = models.ManyToManyField(Room, related_name='room_media_reference', blank=False)
     img = models.ImageField(upload_to='media_room/')
+
 
     class Meta:
         verbose_name = _('Room Media')
@@ -154,18 +168,8 @@ class RoomMedia(models.Model):
                 **extra_fields
             )
             model_object.save()
-            model_object.add_rooms(id_rooms=id_rooms)
+            Room.add_rooms(self, model_object=model_object, id_rooms=id_rooms)
             return model_object
-        except Exception as e:
-            raise ValidationError(message=e)
-
-    def add_rooms(self, id_rooms):
-        if not isinstance(id_rooms, list):
-            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
-        try:
-            for id_room in id_rooms:
-                room = get_object_or_404(Room, pk=id_room)
-                self.id_rooms.add(room.id)
         except Exception as e:
             raise ValidationError(message=e)
 
@@ -176,9 +180,10 @@ class RoomMedia(models.Model):
         old_img_path = None
         if 'img' in extra_fields.keys():
             old_img_path = model_object.img.path
+            setattr(model_object, 'img', extra_fields.get('img'))
 
         if 'id_rooms' in extra_fields.keys():
-            model_object.add_rooms(id_rooms=extra_fields.get('id_rooms'))
+            Room.add_rooms(self, model_object=model_object, id_rooms=extra_fields.get('id_rooms'))
             
         if old_img_path is not None:
             if os.path.exists(old_img_path):
@@ -238,21 +243,8 @@ class RoomExtra(models.Model):
                 **extra_fields
             )
             model_object.save()
-            model_object.add_rooms(id_rooms=id_rooms)
+            Room.add_rooms(self, model_object=model_object, id_rooms=id_rooms)
             return model_object
-        except Exception as e:
-            raise ValidationError(message=e)
-
-    def add_rooms(self, id_rooms):
-        if not isinstance(id_rooms, list):
-            raise ValidationError(message=_('The "id_rooms" field needs to be a list.'))
-        try:
-            for id_room in id_rooms:
-                room = get_object_or_404(Room, pk=id_room)
-                if RoomExtra.objects.filter(id_rooms=room).exclude(id=self.id).count() > 0:
-                    for record in RoomExtra.objects.filter(id_rooms=room):
-                        record.delete_item_room(room)
-                self.id_rooms.add(room.id)
         except Exception as e:
             raise ValidationError(message=e)
 
@@ -261,7 +253,7 @@ class RoomExtra(models.Model):
             raise ValidationError(message=_('The object can`t be updated.'))
 
         if 'id_rooms' in extra_fields.keys():
-            model_object.add_rooms(id_rooms=extra_fields.get('id_rooms'))
+            Room.add_rooms(self, model_object=model_object, id_rooms=extra_fields.get('id_rooms'))
             
         model_object.save()
         return model_object
