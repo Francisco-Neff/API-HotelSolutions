@@ -1,19 +1,22 @@
-import time
+import time, os
 from faker import Faker
 
 from django.test import TestCase
+from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 
-from rest_framework.test import APITransactionTestCase
+from rest_framework.test import APITransactionTestCase, APIClient
 
 from apps.account.tests import test_generate_account_data
 from apps.hotel.models import Account, Hotel, HotelMedia, Room, RoomMedia, RoomExtra
+from apps.hotel.views import HotelMediaRegisterView
 
 # Create your tests here.
 fake = Faker()
 LOCAL_URL = 'http://127.0.0.1:8000'
 PASSWORD = '12345678*Abc'
+IMG_PATH_1= r'.\\media\\media_tests\\img_default_1.png'
 
 
 def test_generate_hotel_data(account):
@@ -31,6 +34,14 @@ def test_generate_hotel_media_data(hotel, name_file='hotel_media_test_example.pn
     data_object = {
         'id_hotel' : hotel,
         'img' : SimpleUploadedFile(name=name_file, content=b'', content_type='image/png')
+    }
+    return data_object
+
+
+def test_generate_hotel_media_view_data(hotel, name_file='hotel_media_test_example.png', file_path=IMG_PATH_1):
+    data_object = {
+        'id_hotel' : hotel,
+        'img' :  SimpleUploadedFile(name=name_file, content=open(file_path, 'rb').read(), content_type='image/png')
     }
     return data_object
 
@@ -57,6 +68,17 @@ def test_generate_room_media_data(id_rooms, name_file='room_media_test_example.p
     data_object = {
         'id_rooms' : id_rooms,
         'img' : SimpleUploadedFile(name=name_file, content=b'', content_type='image/png')
+    }
+    return data_object
+
+
+def test_generate_room_media_view_data(id_rooms, name_file='room_media_test_example.png', file_path=IMG_PATH_1):
+    """
+    The "id_rooms" field should be a list of IDs, like a id_rooms = [1, 2, 3, ..., n]
+    """
+    data_object = {
+        'id_rooms' : id_rooms,
+        'img' : SimpleUploadedFile(name=name_file, content=open(file_path, 'rb').read(), content_type='image/png')
     }
     return data_object
 
@@ -185,6 +207,7 @@ class HotelMediaTestCase(TestCase):
 
 
 
+
 class RoomTestCase(TestCase):
     """
     Test to verify the creation of Room model objects.
@@ -217,12 +240,29 @@ class RoomTestCase(TestCase):
     
     def test_incorrect_create_model(self):
         """
-        Test to verify that the "name" or "number" fields are included during object creation.
+        Test to verify can`t create records in next cases.
+        Case 1: Duplicate constrains "unique_name_number_per_hotel".
+        Case 2: The "name" or "number" fields are included during object creation.
+        Case 3:
         """
-        self.data_object.pop('name')
-        self.data_object.pop('number')
+        model_object = self.model.objects.create(**self.data_object)
+        self.assertTrue(self.model.objects.filter(id=model_object.id).exists())
+        #Case 1
         with self.assertRaises(ValidationError) as error: 
             self.model.objects.create(**self.data_object)
+        self.assertIsInstance(error.exception, ValidationError)
+        #Case 2
+        data_object = self.data_object.copy()
+        data_object.pop('name')
+        data_object.pop('number')
+        with self.assertRaises(ValidationError) as error: 
+            self.model.objects.create(**data_object)
+        self.assertIsInstance(error.exception, ValidationError)
+        #Case 3
+        data_object = self.data_object.copy()
+        data_object['room_status'] = 'wrong_status'
+        with self.assertRaises(ValidationError) as error: 
+            self.model.objects.create(**data_object)
         self.assertIsInstance(error.exception, ValidationError)
     
     def test_correct_update_model(self):
@@ -412,7 +452,7 @@ class RoomExtraTestCase(TestCase):
         model_object = self.model.create_or_update_model(self, **data_object)
         self.assertEqual(model_object.id_rooms.count(), len(data_object['id_rooms']))  
         self.assertTrue(model_object.id_rooms.filter(id__in=data_object['id_rooms']).exists())
-        self.assertEqual(1, self.model.objects.filter(id_rooms=room).count())
+        self.assertEqual(len(data_object['id_rooms']), self.model.objects.filter(id_rooms=room).count())
 
     def test_correct_delete_item(self):
         model_object = self.model.create_or_update_model(self, **self.data_object)
@@ -433,7 +473,7 @@ class RoomExtraTestCase(TestCase):
 
 class HotelRegisterTestCase(APITransactionTestCase):
     """
-    It is verified that hotel navigation are correct.
+    It is verified that HotelRegisterView navigation are correct.
     """
     local_urn = '/hotel/register/hotel/'
 
@@ -489,11 +529,11 @@ class HotelRegisterTestCase(APITransactionTestCase):
         self.assertNotEqual(response.status_code, 201)
         self.assertIn('cod', response.data)
         #Case 2
-        case2 = True
-        while case2:
+        case_id = True
+        while case_id:
             fake_id = fake.pyint(min_value=8000, max_value=9000)
             if not Account.objects.filter(id=fake_id).exists():
-                case2 = False
+                case_id = False
         self.data_object['updated_by'] = fake_id
         response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
         self.assertNotEqual(response.status_code, 201)
@@ -541,3 +581,419 @@ class HotelRegisterTestCase(APITransactionTestCase):
         self.assertIn('cod', response.data)
         self.assertFalse(self.model.objects.filter(id=current_id).exists())
 
+
+
+
+class HotelMediaRegisterTestCase(APITransactionTestCase):
+    """
+    It is verified that HotelMediaRegister navigation are correct.
+    """
+    local_urn = '/hotel/register/hotelmedia/'
+
+    @classmethod
+    def setUpClass(self):
+        self.start_time = time.time()
+        super().setUpClass()
+        print(f"\nStarting the testing class: {self.__name__}")
+    
+    @classmethod
+    def tearDownClass(self):
+        super().tearDownClass()
+        print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
+
+    def setUp(self):
+        self.model = HotelMedia
+        self.account = Account.objects.create_staff(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        self.hotel =  Hotel.objects.create(**test_generate_hotel_data(account=self.account))
+        self.data_object = test_generate_hotel_media_view_data(hotel=self.hotel.id, file_path=IMG_PATH_1)
+
+    def test_incorrect_permission_request(self):
+        """
+        The test to verify that creating new records or do another request, fails in cases where the requesting user is not of administrator type.
+        """
+        account = Account.objects.create_user(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=account)
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('cod', response.data)
+    
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.id_hotel, self.hotel)
+        self.assertEqual(model_object.id_hotel.id, response.data['id_hotel']['id'])
+        model_object.delete()
+    
+    def test_correct_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = test_generate_hotel_media_view_data(hotel=self.hotel.id, name_file='image_test.png', file_path=IMG_PATH_1)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{model_object.id}/', data=data_object, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertTrue(os.path.exists(model_object.img.path))
+        model_object.delete()
+    
+    def test_correct_partial_update_model(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = test_generate_hotel_media_view_data(hotel=self.hotel.id, name_file='image_test.png', file_path=IMG_PATH_1)
+        data_object.pop('id_hotel')
+        response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{model_object.id}/', data=data_object, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertTrue(os.path.exists(model_object.img.path))
+        model_object.delete()
+
+    def test_correct_delete_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        current_id = response.data['id']
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{current_id}/')
+        self.assertFalse(self.model.objects.filter(id=current_id).exists())
+
+
+
+
+class RoomRegisterTestCase(APITransactionTestCase):
+    """
+    It is verified that RoomRegisterView navigation are correct.
+    """
+    local_urn = '/hotel/register/room/'
+
+    @classmethod
+    def setUpClass(self):
+        self.start_time = time.time()
+        super().setUpClass()
+        print(f"\nStarting the testing class: {self.__name__}")
+    
+    @classmethod
+    def tearDownClass(self):
+        super().tearDownClass()
+        print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
+    
+    def setUp(self):
+        self.model = Room
+        self.account = Account.objects.create_staff(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        self.hotel =  Hotel.objects.create(**test_generate_hotel_data(account=self.account))
+        self.data_object = test_generate_room_data(hotel=self.hotel.id, account=self.account.id)
+    
+    def test_incorrect_permission_request(self):
+        """
+        The test to verify that creating new records or do another request, fails in cases where the requesting user is not of administrator type.
+        """
+        self.account = Account.objects.create_user(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('cod', response.data)
+    
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.updated_by, self.account)
+        self.assertEqual(model_object.id_hotel, self.hotel)
+        self.assertEqual(model_object.id_hotel.id, response.data['id_hotel']['id'])
+        self.assertEqual(model_object.name, self.data_object['name'])
+        self.assertEqual(model_object.number, self.data_object['number'])
+    
+    def test_incorrect_register_view(self):
+        """
+        Test to verify that the creation of new records fails in the following cases:
+        #Case 1: Duplicate data.
+        #Case 2: Don`t send name and number fields.
+        #Case 3: Send a incorrect room_status_choices.
+        #Case 4: Field updated_by don't exists.
+        #Case 5: Field id_hotel don't exists.
+        """
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        #Case 1
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        #Case 2
+        data_object = self.data_object.copy()
+        data_object.pop('name')
+        data_object.pop('number')
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        #Case 3
+        data_object = self.data_object.copy()
+        data_object['room_status'] = 'wrong_status'
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        #Case 4
+        case_id = True
+        while case_id:
+            fake_id = fake.pyint(min_value=8000, max_value=9000)
+            if not Account.objects.filter(id=fake_id).exists():
+                case_id = False
+        self.data_object['updated_by'] = fake_id
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        #Case 5
+        case_id = True
+        while case_id:
+            fake_id = fake.pyint(min_value=8000, max_value=9000)
+            if not Hotel.objects.filter(id=fake_id).exists():
+                case_id = False
+        self.data_object['id_hotel'] = fake_id
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+
+    def test_correct_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        data_object_upt = self.data_object.copy()
+        data_object_upt['name'] = fake.name()
+        data_object_upt['number'] = fake.pyint(max_value=5)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{response.data["id"]}/', data=data_object_upt)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.name, data_object_upt['name'])
+        self.assertEqual(model_object.number, data_object_upt['number'])
+    
+    def test_correct_partial_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        data_object_upt = {
+            'name': fake.name(),
+            'number': fake.pyint()
+        }
+        response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{response.data["id"]}/', data=data_object_upt)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('cod', response.data)
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertEqual(model_object.name, data_object_upt['name'])
+        self.assertEqual(model_object.number, data_object_upt['number'])
+    
+    def test_correct_delete_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        current_id = response.data["id"]
+        self.assertTrue(self.model.objects.filter(id=current_id).exists())
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{current_id}/')
+        self.assertEqual(response.status_code, 204)
+        self.assertIn('cod', response.data)
+        self.assertFalse(self.model.objects.filter(id=current_id).exists())
+
+
+
+
+class RoomMediaRegisterTestCase(APITransactionTestCase):
+    """
+    It is verified that RoomMediaRegister navigation are correct.
+    """
+    local_urn = '/hotel/register/roommedia/'
+
+    @classmethod
+    def setUpClass(self):
+        self.start_time = time.time()
+        super().setUpClass()
+        print(f"\nStarting the testing class: {self.__name__}")
+    
+    @classmethod
+    def tearDownClass(self):
+        super().tearDownClass()
+        print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
+
+    def setUp(self):
+        self.model = RoomMedia
+        self.account = Account.objects.create_staff(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        self.hotel =  Hotel.objects.create(**test_generate_hotel_data(account=self.account))
+        self.room = Room.objects.create(**test_generate_room_data(hotel=self.hotel, account=self.account))
+        self.data_object = test_generate_room_media_view_data(id_rooms=[self.room.id], file_path=IMG_PATH_1)
+
+    def test_incorrect_permission_request(self):
+        """
+        The test to verify that creating new records or do another request, fails in cases where the requesting user is not of administrator type.
+        """
+        account = Account.objects.create_user(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=account)
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('cod', response.data)
+    
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertTrue(model_object.id_rooms.filter(id=response.data['id_rooms'][0]['id_room']).exists())
+        model_object.delete()
+    
+    def test_correct_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = test_generate_room_media_view_data(id_rooms=[self.room.id], name_file='room_test.png', file_path=IMG_PATH_1)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{model_object.id}/', data=data_object, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertTrue(os.path.exists(model_object.img.path))
+        model_object.delete()
+    
+    def test_correct_partial_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = test_generate_room_media_view_data(id_rooms=[self.room.id], file_path=IMG_PATH_1)
+        data_object.pop('id_rooms')
+        response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{model_object.id}/', data=data_object, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertTrue(os.path.exists(model_object.img.path))
+        model_object.delete()
+
+    def test_correct_delete_item_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = {'id_room':model_object.id_rooms.first().id}
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}{model_object.id}/delete_item/', data=data_object, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(model_object.id_rooms.filter(id=self.room.id).exists())
+
+    def test_correct_delete_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object, format='multipart')
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        current_id = response.data['id']
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{current_id}/')
+        self.assertFalse(self.model.objects.filter(id=current_id).exists())
+
+
+
+
+class RoomExtraRegisterTestCase(APITransactionTestCase):
+    """
+    It is verified that RoomMediaRegister navigation are correct.
+    """
+    local_urn = '/hotel/register/roomextra/'
+
+    @classmethod
+    def setUpClass(self):
+        self.start_time = time.time()
+        super().setUpClass()
+        print(f"\nStarting the testing class: {self.__name__}")
+    
+    @classmethod
+    def tearDownClass(self):
+        super().tearDownClass()
+        print(f"\nFinishing the testing class: {self.__name__}, Elapsed time: {(time.time()-self.start_time)}" )
+
+    def setUp(self):
+        self.model = RoomExtra
+        self.account = Account.objects.create_staff(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=self.account)
+        self.hotel =  Hotel.objects.create(**test_generate_hotel_data(account=self.account))
+        self.room = Room.objects.create(**test_generate_room_data(hotel=self.hotel, account=self.account))
+        self.data_object = test_generate_room_extra_data(id_rooms=[self.room.id])
+
+    def test_incorrect_permission_request(self):
+        """
+        The test to verify that creating new records or do another request, fails in cases where the requesting user is not of administrator type.
+        """
+        account = Account.objects.create_user(**test_generate_account_data(is_active=True))
+        self.client.force_authenticate(user=account)
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertNotEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('cod', response.data)
+    
+    def test_correct_register_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        self.assertTrue(model_object.id_rooms.filter(id=response.data['id_rooms'][0]['id_room']).exists())
+        model_object.delete()
+    
+    def test_correct_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = test_generate_room_extra_data(id_rooms=[self.room.id], has_tv=True)
+        response = self.client.put(f'{LOCAL_URL}{self.local_urn}{model_object.id}/', data=data_object)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+    
+    def test_correct_partial_update_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = {'id_rooms':[self.room.id],'has_internet':True}
+        response = self.client.patch(f'{LOCAL_URL}{self.local_urn}{model_object.id}/', data=data_object)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+
+    def test_correct_delete_item_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        model_object = self.model.objects.get(id=response.data['id'])
+        data_object = {'id_room':model_object.id_rooms.first().id}
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}{model_object.id}/delete_item/', data=data_object)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(model_object.id_rooms.filter(id=self.room.id).exists())
+
+    def test_correct_delete_view(self):
+        response = self.client.post(f'{LOCAL_URL}{self.local_urn}', data=self.data_object)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('cod', response.data)
+        self.assertTrue(self.model.objects.filter(id=response.data['id']).exists())
+        current_id = response.data['id']
+        response = self.client.delete(f'{LOCAL_URL}{self.local_urn}{current_id}/')
+        self.assertFalse(self.model.objects.filter(id=current_id).exists())
