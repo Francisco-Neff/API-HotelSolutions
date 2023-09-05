@@ -205,6 +205,15 @@ class RoomMedia(models.Model):
         self.img.delete()
         super().delete(using=using, keep_parents=keep_parents)
 
+    def get_query_media_information_from_room(self, room):
+        """
+        Query to retrieve all media-related information associated with a Room record.
+        """
+        if not isinstance(room, Room):
+            raise ValidationError(message=_('You must enter a Room objects for the search.'))
+        return RoomMedia.objects.filter(id_rooms=room)
+
+
 
 
 
@@ -266,3 +275,11 @@ class RoomExtra(models.Model):
             self.id_rooms.remove(id_room)
         except:
             raise ValidationError(message=_('The object can`t delete room selected.'))
+    
+    def get_query_extra_information_from_room(self, room):
+        """
+        Query to retrieve all extra-related information associated with a Room record.
+        """
+        if not isinstance(room, Room):
+            raise ValidationError(message=_('You must enter a Room objects for the search.'))
+        return RoomExtra.objects.filter(id_rooms=room)
