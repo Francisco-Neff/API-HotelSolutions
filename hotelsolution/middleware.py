@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from rest_framework import status
 
 class AddCodMiddleware:
@@ -13,7 +15,7 @@ class AddCodMiddleware:
         #This verification will not be performed for 5XX error types.
         if not str(response.status_code).startswith('5'):
             if response.data:
-                if not 'cod' in response.data.keys():
+                if not 'cod' in response.data:
                     self.__add_cod(response)
             else:
                 response.data = {'cod': 1}
@@ -23,6 +25,8 @@ class AddCodMiddleware:
 
     def __add_cod(self, response):
         if response.exception or not status.is_success(response.status_code):
-            response.data['cod'] = 1
+            cod = {'cod':1}
+            response.data.update(cod)
         else:
-            response.data['cod'] = 0
+            cod = {'cod':0}
+            response.data.update(cod)
