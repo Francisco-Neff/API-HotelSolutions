@@ -1,8 +1,15 @@
 # HOTEL SOLUTIONS   
 
-API for the management of hotel rooms and reservations.
+API-Rest for the management of hotel rooms and reservations.
 
-In this project, no third-party libraries or dependencies will be used to facilitate certain solutions, such as `django-simple-history` for a log record system or `django-storages` for storing different files.
+In this project, no third-party libraries or dependencies will be used to facilitate certain solutions, such as `django-simple-history` for a log record system or `django-storages` for storing different files. 
+
+For controlling the application in various views, the `is_staff` and `is_superuser` fields of the Account model will be used, temporarily setting aside the permissions and access provided by Django itself.
+
+![Python](https://img.shields.io/badge/Python-3.8.10-blue?logo=python&logoColor=009900&labelColor=CCFF99)
+![Django](https://img.shields.io/badge/Django-4.0-blue?logo=django&logoColor=009900&labelColor=CCFF99)
+![DRF](https://img.shields.io/badge/DRF-3.13.0-blue?logo=django&logoColor=009900&labelColor=CCFF99)
+![SQLite](https://img.shields.io/badge/SQLite-3.0-blue?logo=sqlite&logoColor=009900&labelColor=CCFF99)
 
 ---
 ## Applications

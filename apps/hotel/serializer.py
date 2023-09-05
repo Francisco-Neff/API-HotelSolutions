@@ -137,6 +137,9 @@ class RoomExtraRegisterSerializer(serializers.ModelSerializer):
 
 
 class HotelSimplifyViewerSerializer(serializers.ModelSerializer):
+    """
+    Simplified serializer for Hotel model display
+    """
     media = serializers.SerializerMethodField()
 
     class Meta:
@@ -157,6 +160,9 @@ class HotelSimplifyViewerSerializer(serializers.ModelSerializer):
 
 
 class HotelCompleteViewerSerializer(HotelSimplifyViewerSerializer):
+    """
+    Completed serializer for Hotel model display
+    """
     room = serializers.SerializerMethodField()
 
 
@@ -172,6 +178,9 @@ class HotelCompleteViewerSerializer(HotelSimplifyViewerSerializer):
 
 
 class RoomViewerSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Room model display
+    """
     media = serializers.SerializerMethodField()
     extra = serializers.SerializerMethodField()
 

@@ -986,7 +986,7 @@ class RoomMediaRegisterTestCase(APITransactionTestCase):
 
 class RoomExtraRegisterTestCase(APITransactionTestCase):
     """
-    It is verified that RoomMediaRegister navigation are correct.
+    It is verified that RoomExtraRegister navigation are correct.
     """
     local_urn = '/hotel/register/roomextra/'
 

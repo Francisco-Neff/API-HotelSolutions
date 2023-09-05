@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
-from rest_framework import permissions, status, viewsets, parsers, mixins
+from rest_framework import permissions, status, viewsets, parsers
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
@@ -14,6 +14,9 @@ from apps.hotel.serializer import HotelRegisterSerializer, HotelMediaRegisterSer
 
 
 class BaseCRUDModelView(viewsets.ModelViewSet):
+    """
+    Basic CRUD operations to be used in record administration. To utilize the various methods, the user must have administrator privileges.
+    """
     model = None
     serializer_class = None
     queryset = None
@@ -90,6 +93,9 @@ class BaseCRUDModelView(viewsets.ModelViewSet):
 
 
 class HotelRegisterView(BaseCRUDModelView):
+    """
+    CRUD for Hotel Model
+    """
     model = Hotel
     serializer_class = HotelRegisterSerializer
     permission_classes = [permissions.IsAdminUser]
@@ -99,6 +105,9 @@ class HotelRegisterView(BaseCRUDModelView):
 
 
 class HotelMediaRegisterView(BaseCRUDModelView):
+    """
+    CRUD for HotelMedia Model
+    """
     model = HotelMedia
     serializer_class = HotelMediaRegisterSerializer
     parser_classes = [parsers.MultiPartParser, parsers.FileUploadParser]
@@ -108,6 +117,9 @@ class HotelMediaRegisterView(BaseCRUDModelView):
 
 
 class RoomRegisterView(BaseCRUDModelView):
+    """
+    CRUD for Room Model
+    """
     model = Room
     serializer_class = RoomRegisterSerializer
     permission_classes = [permissions.IsAdminUser]
@@ -125,6 +137,9 @@ class RoomRegisterView(BaseCRUDModelView):
 
 
 class RoomMediaRegisterView(BaseCRUDModelView):
+    """
+    CRUD for RoomMedia Model
+    """
     model = RoomMedia
     serializer_class = RoomMediaRegisterSerializer
     parser_classes = [parsers.MultiPartParser, parsers.FileUploadParser]
@@ -153,6 +168,9 @@ class RoomMediaRegisterView(BaseCRUDModelView):
 
 
 class RoomExtraRegisterView(BaseCRUDModelView):
+    """
+    CRUD for RoomExtra Model
+    """
     model = RoomExtra
     serializer_class = RoomExtraRegisterSerializer
     http_method_names = ['get', 'post', 'put', 'patch', 'delete']
@@ -188,6 +206,9 @@ class RoomExtraRegisterView(BaseCRUDModelView):
 
 
 class BaseViewer(viewsets.ReadOnlyModelViewSet):
+    """
+    Basic viewer to display the content of records either by their ID or as a list of all records
+    """
     model = None
     serializer_class = None
     queryset = None
@@ -216,6 +237,9 @@ class BaseViewer(viewsets.ReadOnlyModelViewSet):
 
     
 class HotelPublicViewer(BaseViewer):
+    """
+    Retrieve all data for a hotel records
+    """
     model = Hotel
     serializer_class = HotelSimplifyViewerSerializer
     queryset = None
@@ -225,6 +249,10 @@ class HotelPublicViewer(BaseViewer):
 
 
 class HotelPrivateViewer(BaseViewer):
+    """
+    For this viewer, the user must have administrator privileges
+    Retrieve all data for a hotel, along with its rooms.
+    """
     model = Hotel
     serializer_class = HotelCompleteViewerSerializer
     permission_classes = [permissions.IsAdminUser]
@@ -235,6 +263,9 @@ class HotelPrivateViewer(BaseViewer):
 
 
 class RoomPublicViewer(BaseViewer):
+    """
+    Retrieve all data for a room, room_media and room_extra, records.
+    """
     model = Room
     serializer_class = RoomViewerSerializer
     queryset = None
