@@ -53,6 +53,27 @@ class RoomExtra {
     has_tv: BooleanField
 }
 
+class Reservation {
+    id: BigAutoField
+    id_room: ForeignKey
+    id_account: ForeignKey
+    id_discount: ForeignKey
+    guest: PositiveSmallInteger
+    price: DecimalField
+    check_in: DateTimeField
+    check_out: DateTimeField
+    has_canceled: BooleanField
+    created_at: DateTimeField
+    updated_at: DateTimeField
+    updated_by: ForeignKey
+}
+class Discount{
+    id: BigAutoField
+    discount_code: CharField
+    discount_rate: DecimalField
+    discount: DecimalField
+}
+
 
 Account "1..1" <--> "1..1" Hotel
 Account "1..1" <--> "1..1" Room
@@ -60,5 +81,9 @@ Hotel "1..*" <--> "1..1" HotelMedia
 Hotel "1..*" <-right-> "1..1" Room
 Room "1..*" <--> "1..*" RoomMedia
 Room "1..*" <--> "1..1" RoomExtra
+Room "1..*" <-right-> "1..1" Reservation
+Account "1..*" <--> "1..1" Reservation
+Reservation "1..1" <-right-> "1..*" Discount
+
 
 @enduml

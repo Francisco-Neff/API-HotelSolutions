@@ -16,12 +16,16 @@ Para el control de la aplicación en las diferentes vistas se utilizaran los cam
 ## Aplicaciones
 - [Account](#account)
 - [Hotel](#hotel)
+- [Reservation](#reservation)
 
 ### Account
 Lleva el registro de los diferentes usuarios de todo el servicio en BD, como los diferentes métodos que esta aplicación pueda necesitar para trabajar con los registros.
 
 ### Hotel
 Almacena los diferentes registros de hoteles y habitaciones junto a su información, como contenidos media, en BD como los diferentes métodos que esta aplicación pueda necesitar.
+
+### Reservation
+Almacena los registros asociados a las reservas realizadas, vinculadas a las habitaciones y al usuario que realiza la reserva, como los diferentes métodos que esta aplicación pueda necesitar.
 
 ## UML
 **NOTA:** Modelo de datos simplificado para visualizar el contenido de todos los modelos y sus campos, si necesita mas información especifica como nombre de tablas o relaciones en los casos muchos a muchos puede visualizar el contenido de la base de datos generada tras utilizar los métodos `makemigrations` y `migrate`.
