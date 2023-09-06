@@ -2,15 +2,14 @@ import time, os
 from faker import Faker
 
 from django.test import TestCase
-from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 
-from rest_framework.test import APITransactionTestCase, APIClient
+from rest_framework.test import APITransactionTestCase
 
 from apps.account.tests import test_generate_account_data
 from apps.hotel.models import Account, Hotel, HotelMedia, Room, RoomMedia, RoomExtra
-from apps.hotel.views import HotelMediaRegisterView
+
 
 # Create your tests here.
 fake = Faker()
