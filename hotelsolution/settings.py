@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     #Local APPS
     'apps.account',
     'apps.hotel',
+    'apps.reservation',
 ]
 
 MIDDLEWARE = [
