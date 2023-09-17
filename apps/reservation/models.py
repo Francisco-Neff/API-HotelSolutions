@@ -111,7 +111,7 @@ class Reservation(models.Model):
                 if id_discount.discount > price:
                     price = 0
             elif id_discount.discount_rate:
-                price = price*(1-(id_discount.discount_rate/100))
+                price = round(price*(1-(id_discount.discount_rate/100)),2 )
             else:
                 raise ValidationError(message=_('The discount could not be applied.'))
         return price
