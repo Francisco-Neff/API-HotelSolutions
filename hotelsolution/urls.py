@@ -50,4 +50,5 @@ urlpatterns = [
     #Local
     path('account/', include('apps.account.urls')),
     path('hotel/', include('apps.hotel.urls')),
+    path('reservation/', include('apps.reservation.urls')),
 ]
