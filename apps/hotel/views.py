@@ -54,7 +54,7 @@ class BaseCRUDModelView(viewsets.ModelViewSet):
                 serializer = self.serializer_class(model_object)
                 return Response({'cod':0,'message': f'{self.model.__name__} updated successfully.', **serializer.data}, status=status.HTTP_200_OK)
             except ValidationError as e:
-                return Response({'cod':1,'message':f"{_('Unexpected validation.')} {str(e.message)}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'cod':1,'message':f"{_('Unexpected validation.')} {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
                 return Response({'cod':1,'message':f"{_('Unexpected error.')} {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -72,7 +72,7 @@ class BaseCRUDModelView(viewsets.ModelViewSet):
                 serializer = self.serializer_class(model_object)
                 return Response({'cod':0,'message': f'{self.model.__name__} updated successfully.', **serializer.data}, status=status.HTTP_200_OK)
             except ValidationError as e:
-                return Response({'cod':1,'message':f"{_('Unexpected validation.')} {str(e.message)}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'cod':1,'message':f"{_('Unexpected validation.')} {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
                 return Response({'cod':1,'message':f"{_('Unexpected error.')} {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'cod':1,'message':f"{_('Data error: ')} {model_serializer.errors}"}, status=status.HTTP_400_BAD_REQUEST)

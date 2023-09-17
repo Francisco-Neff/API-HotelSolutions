@@ -70,6 +70,8 @@ class AccountUserRegisterSerializer(BaseAccountRegisterSerializer):
     """
     groups = None
     user_permissions = None
+
+
     class Meta:
         model = Account
         exclude = ['is_staff','is_superuser','groups','user_permissions']
@@ -87,6 +89,8 @@ class AccountRetrieveSerializer(BaseAccountRegisterSerializer):
     """
     groups = None
     user_permissions = None
+
+    
     class Meta:
         model = Account
         exclude = ['is_staff', 'is_superuser', 'is_active', 'groups', 'user_permissions']
